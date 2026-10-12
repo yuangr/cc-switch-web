@@ -123,6 +123,10 @@ export interface UseSettingsFormResult {
  */
 export function useSettingsForm(): UseSettingsFormResult {
   const { i18n } = useTranslation();
+  // Language changes can replace react-i18next's wrapper. Keep callbacks stable
+  // so a language update does not reload server data over unsaved form edits.
+  const i18nRef = useRef(i18n);
+  i18nRef.current = i18n;
   const { data, isLoading } = useSettingsQuery();
 
   const [settingsState, setSettingsState] = useState<SettingsFormState | null>(
@@ -142,18 +146,15 @@ export function useSettingsForm(): UseSettingsFormResult {
         // localStorage 可能在隐私模式/受限环境下抛异常，忽略并回退到 i18n.language
       }
     }
-    return normalizeLanguage(i18n.language);
-  }, [i18n]);
+    return normalizeLanguage(i18nRef.current.language);
+  }, []);
 
-  const syncLanguage = useCallback(
-    (lang: Language) => {
-      const current = normalizeLanguage(i18n.language);
-      if (current !== lang) {
-        void i18n.changeLanguage(lang);
-      }
-    },
-    [i18n],
-  );
+  const syncLanguage = useCallback((lang: Language) => {
+    const current = normalizeLanguage(i18nRef.current.language);
+    if (current !== lang) {
+      void i18nRef.current.changeLanguage(lang);
+    }
+  }, []);
 
   // 初始化设置数据
   useEffect(() => {

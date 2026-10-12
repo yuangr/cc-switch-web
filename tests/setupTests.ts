@@ -1,4 +1,4 @@
-import "@testing-library/jest-dom";
+import "@testing-library/jest-dom/vitest";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
 import i18n from "i18next";
@@ -6,6 +6,11 @@ import { initReactI18next } from "react-i18next";
 import { server } from "./msw/server";
 import { resetProviderState } from "./msw/state";
 import "./msw/tauriMocks";
+
+vi.mock("@tauri-apps/api/path", () => ({
+  homeDir: async () => "/home/mock",
+  join: async (...segments: string[]) => segments.join("/"),
+}));
 
 class MockResizeObserver {
   observe() {}
@@ -26,10 +31,7 @@ beforeAll(async () => {
   }
   globalThis.ResizeObserver ??= MockResizeObserver;
   process.env.HOME = "/home/mock";
-  vi.mock("@tauri-apps/api/path", () => ({
-    homeDir: async () => "/home/mock",
-    join: async (...segments: string[]) => segments.join("/"),
-  }));
+
   server.listen({ onUnhandledRequest: "warn" });
   await i18n.use(initReactI18next).init({
     lng: "zh",

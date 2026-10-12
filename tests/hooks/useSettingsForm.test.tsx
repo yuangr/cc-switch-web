@@ -1,5 +1,13 @@
 import { renderHook, act, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  type MockInstance,
+} from "vitest";
 import i18n from "i18next";
 import { useSettingsForm } from "@/hooks/useSettingsForm";
 
@@ -24,7 +32,7 @@ vi.mock("@/lib/query", () => ({
   useSettingsQuery: (...args: unknown[]) => useSettingsQueryMock(...args),
 }));
 
-let changeLanguageSpy: ReturnType<typeof vi.spyOn<any, any>>;
+let changeLanguageSpy: MockInstance<typeof i18n.changeLanguage>;
 
 beforeEach(() => {
   useSettingsQueryMock.mockReset();
@@ -43,6 +51,22 @@ afterEach(() => {
 });
 
 describe("useSettingsForm Hook", () => {
+  it("preserves unsaved fields when a real language change replaces the i18n wrapper", async () => {
+    useSettingsQueryMock.mockReturnValue({
+      data: { showInTray: true, language: "zh" },
+      isLoading: false,
+    });
+    const { result } = renderHook(() => useSettingsForm());
+    await waitFor(() => expect(result.current.settings?.showInTray).toBe(true));
+    changeLanguageSpy.mockRestore();
+    act(() => result.current.updateSettings({ showInTray: false }));
+    await act(async () => {
+      await i18n.changeLanguage("en");
+    });
+    expect(result.current.settings?.showInTray).toBe(false);
+    expect(result.current.initialLanguage).toBe("zh");
+  });
+
   it("should normalize settings and sync language on initialization", async () => {
     useSettingsQueryMock.mockReturnValue({
       data: {
@@ -338,7 +362,11 @@ describe("useSettingsForm Hook", () => {
     });
 
     changeLanguageSpy.mockClear();
-    (i18n as any).language = "zh";
+    act(() => {
+      // Refresh react-i18next's language wrapper as a real change would.
+      i18n.language = "zh";
+      i18n.emit("languageChanged", "zh");
+    });
 
     act(() => {
       result.current.resetSettings({
@@ -382,7 +410,11 @@ describe("useSettingsForm Hook", () => {
     });
 
     changeLanguageSpy.mockClear();
-    (i18n as any).language = "zh";
+    act(() => {
+      // Refresh react-i18next's language wrapper as a real change would.
+      i18n.language = "zh";
+      i18n.emit("languageChanged", "zh");
+    });
 
     act(() => {
       result.current.syncLanguage("zh");
