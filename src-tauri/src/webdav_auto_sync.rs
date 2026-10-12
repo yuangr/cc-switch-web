@@ -24,10 +24,23 @@ impl AutoSyncSuppressionGuard {
 
 impl Drop for AutoSyncSuppressionGuard {
     fn drop(&mut self) {
-        let _ =
-            AUTO_SYNC_SUPPRESS_DEPTH.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |depth| {
-                Some(depth.saturating_sub(1))
-            });
+        release_suppression(&AUTO_SYNC_SUPPRESS_DEPTH);
+    }
+}
+
+// Preserve Rust 1.75 compatibility without the deprecated fetch_update API.
+fn release_suppression(depth: &AtomicUsize) {
+    let mut current = depth.load(Ordering::SeqCst);
+    loop {
+        match depth.compare_exchange_weak(
+            current,
+            current.saturating_sub(1),
+            Ordering::SeqCst,
+            Ordering::SeqCst,
+        ) {
+            Ok(_) => break,
+            Err(actual) => current = actual,
+        }
     }
 }
 
@@ -103,6 +116,33 @@ async fn run_worker_loop(state: Arc<AppState>, mut receiver: Receiver<String>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn suppression_release_does_not_underflow() {
+        let depth = AtomicUsize::new(0);
+        release_suppression(&depth);
+        assert_eq!(depth.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn suppression_release_preserves_concurrent_counts() {
+        let depth = Arc::new(AtomicUsize::new(0));
+        let handles: Vec<_> = (0..8)
+            .map(|_| {
+                let depth = Arc::clone(&depth);
+                std::thread::spawn(move || {
+                    for _ in 0..1_000 {
+                        depth.fetch_add(1, Ordering::SeqCst);
+                        release_suppression(&depth);
+                    }
+                })
+            })
+            .collect();
+        for handle in handles {
+            handle.join().unwrap();
+        }
+        assert_eq!(depth.load(Ordering::SeqCst), 0);
+    }
 
     #[test]
     fn only_configuration_tables_trigger_sync() {
