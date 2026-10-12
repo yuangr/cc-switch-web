@@ -604,8 +604,11 @@ const McpFormModal: React.FC<McpFormModalProps> = ({
                   <Checkbox
                     id="enable-claude"
                     checked={enabledApps.claude}
-                    onCheckedChange={(checked: boolean) =>
-                      setEnabledApps({ ...enabledApps, claude: checked })
+                    onCheckedChange={(checked) =>
+                      setEnabledApps({
+                        ...enabledApps,
+                        claude: checked === true,
+                      })
                     }
                   />
                   <label
@@ -620,8 +623,11 @@ const McpFormModal: React.FC<McpFormModalProps> = ({
                   <Checkbox
                     id="enable-codex"
                     checked={enabledApps.codex}
-                    onCheckedChange={(checked: boolean) =>
-                      setEnabledApps({ ...enabledApps, codex: checked })
+                    onCheckedChange={(checked) =>
+                      setEnabledApps({
+                        ...enabledApps,
+                        codex: checked === true,
+                      })
                     }
                   />
                   <label
@@ -636,8 +642,11 @@ const McpFormModal: React.FC<McpFormModalProps> = ({
                   <Checkbox
                     id="enable-gemini"
                     checked={enabledApps.gemini}
-                    onCheckedChange={(checked: boolean) =>
-                      setEnabledApps({ ...enabledApps, gemini: checked })
+                    onCheckedChange={(checked) =>
+                      setEnabledApps({
+                        ...enabledApps,
+                        gemini: checked === true,
+                      })
                     }
                   />
                   <label
@@ -652,8 +661,11 @@ const McpFormModal: React.FC<McpFormModalProps> = ({
                   <Checkbox
                     id="enable-opencode"
                     checked={enabledApps.opencode}
-                    onCheckedChange={(checked: boolean) =>
-                      setEnabledApps({ ...enabledApps, opencode: checked })
+                    onCheckedChange={(checked) =>
+                      setEnabledApps({
+                        ...enabledApps,
+                        opencode: checked === true,
+                      })
                     }
                   />
                   <label
